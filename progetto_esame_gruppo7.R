@@ -24,4 +24,16 @@
   campioni <- sample_n(pasticcerie, 200)
   library(writexl) #avviamo la libreria per esportare i campioni su excel e analizzarli più comodamente
   write_xlsx(campioni, "C:/Users/MirkoLorenzoLaRocca/UFS/UFS07/Esercizi/campioni.xlsx")
-  
+
+Driver <- dictionary(list(Personale = c("amabl*", "cordial*", "empatic*", "dispo*", "groser*", "maleduca*", "descort*",
+                                        "rud*", "personal*", "bonit*", "cuidad*", "atten*", "desagadrad*", "educad*", "simpati*"),
+                          Cualita = c( "val*", "bon*", "cup*", "calid*", "excel*", "mal*", "buen*", "saboros*",
+                                      "estupend*", "complet*","peqe", "tant*", "grand*"),
+                          
+                          Prezzo = c( "prec*", "car*", "paga*", "bass*", "peqe*", "poc*", "derec*"),
+                          
+                          Location = c("limp*", "suci*", "gran*", "bonit*", "peqe", "local*", "locatio*", "posici*", "centr*",
+                                       "espacio*", "lind*", "encant*", "cuidad* ")
+                          ))
+
+
