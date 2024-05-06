@@ -3,7 +3,7 @@
   library(dplyr)
 
 #Importazione DataSet----
-  pasticcerie <- import("C:/Users/MirkoLorenzoLaRocca/UFS/UFS07/Esercizi/GRUPPO 6-7. Spain_Bakery.xlsx")
+  pasticcerie <- import("GRUPPO 6-7. Spain_Bakery.xlsx")
   pasticcerie <- filter(pasticcerie, lang_value=="es") #teniamo solo le recensioni segnate come spagnole
   
 #Esaminazione DataSet----
