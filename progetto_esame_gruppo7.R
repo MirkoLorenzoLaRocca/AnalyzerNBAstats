@@ -1,6 +1,9 @@
 #Avvio librerie----
   library(rio)
   library(dplyr)
+  #install.packages("quanteda")
+  #install.packages("newsmap")
+  library(quanteda)
 
 #Importazione DataSet----
   pasticcerie <- import("GRUPPO 6-7. Spain_Bakery.xlsx")
@@ -38,19 +41,9 @@ Driver <- dictionary(list(Personale = c("amabl*", "cordial*", "empatic*", "dispo
 
 campioni_R <- import("C:/Users/FilippoConsole/OneDrive - ITS Angelo Rizzoli/Desktop.old/RStudio/Esame-R/campioni_R.xlsx")
 campioni_R_2 <- select(campioni_R, !sentiment_score)
-PasticcierieSenzaCampioni <- rbind(pasticcerie, campioni_R_2)
-x <- duplicated(PasticcierieSenzaCampioni$text)
-x <- as.data.frame(x)
 
-table(x$x)
+PasticcierieSenzaCampioni <- anti_join(pasticcerie, campioni_R_2)
 
-PasticcierieSenzaCampioni <- cbind(PasticcierieSenzaCampioni, x)
-PasticcierieSenzaCampioni <- filter(PasticcierieSenzaCampioni, x == "FALSE")
-
-
-x <- PasticcierieSenzaCampioni[!PasticcierieSenzaCampioni %in% intersect(pasticcerie, campioni_R_2)]
-
-x <- pasticcerie - campioni_R_2
 
 #Training set
 
