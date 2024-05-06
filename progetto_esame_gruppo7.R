@@ -4,6 +4,9 @@
   #install.packages("quanteda")
   #install.packages("newsmap")
   library(quanteda)
+  library(newsmap)
+  library(quanteda.textstats)
+  library(readtext)
 
 #Importazione DataSet----
   pasticcerie <- import("GRUPPO 6-7. Spain_Bakery.xlsx")
@@ -46,4 +49,21 @@ PasticcierieSenzaCampioni <- anti_join(pasticcerie, campioni_R_2)
 
 
 #Training set
+install.packages("readtext")
+install.packages()
+install.packages()
+install.packages()
 
+
+Corpus_pasticcerie <- corpus(pasticcerie)
+Analisi_testo <- textstat_summary(Corpus_pasticcerie)
+
+
+Dfm_pasticcierie <- Corpus_pasticcerie %>%
+  tokens(remove_punct = T, remove_numbers = T) %>%
+  tokens_tolower() %>%
+  tokens_wordstem() %>%
+  tokens_remove(c(stopwords("spanish"), "y", "el", "muy","ha","la","las","en","vi","un","sin","me")) %>%
+  dfm()
+
+topfeatures(Dfm_pasticcierie)
