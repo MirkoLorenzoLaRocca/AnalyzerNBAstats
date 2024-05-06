@@ -21,13 +21,13 @@
   sum(is.na(pasticcerie$text)) #i text non contengono NA
   
   #estraiamo 200 recensioni a caso per classificarle a mano per poi allenare l'algoritmo
-  campioni <- sample_n(pasticcerie, 200)
+  # campioni <- sample_n(pasticcerie, 200)
   library(writexl) #avviamo la libreria per esportare i campioni su excel e analizzarli più comodamente
-  write_xlsx(campioni, "campioni.xlsx")
+  # write_xlsx(campioni, "campioni.xlsx")
 
 Driver <- dictionary(list(Personale = c("amabl*", "cordial*", "empatic*", "dispo*", "groser*", "maleduca*", "descort*",
                                         "rud*", "personal*", "bonit*", "cuidad*", "atten*", "desagadrad*", "educad*", "simpati*"),
-                          Cualita = c( "val*", "bon*", "cup*", "calid*", "excel*", "mal*", "buen*", "saboros*",
+                          Qualita = c( "val*", "bon*", "cup*", "calid*", "excel*", "mal*", "buen*", "saboros*",
                                       "estupend*", "complet*","peqe", "tant*", "grand*"),
                           
                           Prezzo = c( "prec*", "car*", "paga*", "bass*", "peqe*", "poc*", "derec*"),
@@ -36,4 +36,21 @@ Driver <- dictionary(list(Personale = c("amabl*", "cordial*", "empatic*", "dispo
                                        "espacio*", "lind*", "encant*", "cuidad* ")
                           ))
 
+campioni_R <- import("C:/Users/FilippoConsole/OneDrive - ITS Angelo Rizzoli/Desktop.old/RStudio/Esame-R/campioni_R.xlsx")
+campioni_R_2 <- select(campioni_R, !sentiment_score)
+PasticcierieSenzaCampioni <- rbind(pasticcerie, campioni_R_2)
+x <- duplicated(PasticcierieSenzaCampioni$text)
+x <- as.data.frame(x)
+
+table(x$x)
+
+PasticcierieSenzaCampioni <- cbind(PasticcierieSenzaCampioni, x)
+PasticcierieSenzaCampioni <- filter(PasticcierieSenzaCampioni, x == "FALSE")
+
+
+x <- PasticcierieSenzaCampioni[!PasticcierieSenzaCampioni %in% intersect(pasticcerie, campioni_R_2)]
+
+x <- pasticcerie - campioni_R_2
+
+#Training set
 
