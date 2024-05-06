@@ -23,7 +23,7 @@
   #estraiamo 200 recensioni a caso per classificarle a mano per poi allenare l'algoritmo
   campioni <- sample_n(pasticcerie, 200)
   library(writexl) #avviamo la libreria per esportare i campioni su excel e analizzarli più comodamente
-  write_xlsx(campioni, "C:/Users/MirkoLorenzoLaRocca/UFS/UFS07/Esercizi/campioni.xlsx")
+  write_xlsx(campioni, "campioni.xlsx")
 
 Driver <- dictionary(list(Personale = c("amabl*", "cordial*", "empatic*", "dispo*", "groser*", "maleduca*", "descort*",
                                         "rud*", "personal*", "bonit*", "cuidad*", "atten*", "desagadrad*", "educad*", "simpati*"),
