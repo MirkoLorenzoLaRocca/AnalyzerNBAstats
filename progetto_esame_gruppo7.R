@@ -33,7 +33,7 @@
 
 Driver <- dictionary(list(Personale = c("amabl*", "cordial*", "empatic*", "dispo*", "groser*", "maleduca*", "descort*",
                                         "rud*", "personal*", "bonit*", "cuidad*", "atten*", "desagadrad*", "educad*", "simpati*"),
-                          Qualita = c( "val*", "bon*", "cup*", "calid*", "excel*", "mal*", "buen*", "saboros*",
+                          Qualità = c( "val*", "bon*", "cup*", "calid*", "excel*", "mal*", "buen*", "saboros*",
                                       "estupend*", "complet*","peqe", "tant*", "grand*"),
                           
                           Prezzo = c( "prec*", "car*", "paga*", "bass*", "peqe*", "poc*", "derec*"),
@@ -45,15 +45,15 @@ Driver <- dictionary(list(Personale = c("amabl*", "cordial*", "empatic*", "dispo
 campioni_R <- import("C:/Users/FilippoConsole/OneDrive - ITS Angelo Rizzoli/Desktop.old/RStudio/Esame-R/campioni_R.xlsx")
 campioni_R_2 <- select(campioni_R, !sentiment_score)
 
-PasticcierieSenzaCampioni <- anti_join(pasticcerie, campioni_R_2)
+PasticcierieSenzaCampioni <- as.data.frame(anti_join(pasticcerie, campioni_R_2))
+print(typeof(Driver))
+
+
 
 
 #Training set
 install.packages("readtext")
-install.packages()
-install.packages()
-install.packages()
-
+install.packages("quanteda.textstats")
 
 Corpus_pasticcerie <- corpus(pasticcerie)
 Analisi_testo <- textstat_summary(Corpus_pasticcerie)
@@ -67,3 +67,7 @@ Dfm_pasticcierie <- Corpus_pasticcerie %>%
   dfm()
 
 topfeatures(Dfm_pasticcierie)
+
+#Applicazione Dizionario alla DFM
+
+Driver_pasticcierie <- dfm_lookup(PasticcierieSenzaCampioni, Driver)
