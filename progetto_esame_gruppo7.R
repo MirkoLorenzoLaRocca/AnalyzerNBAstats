@@ -32,14 +32,16 @@
   # write_xlsx(campioni, "campioni.xlsx")
 
 Driver <- dictionary(list(Personale = c("amabl*", "cordial*", "empatic*", "dispo*", "groser*", "maleduca*", "descort*",
-                                        "rud*", "personal*", "bonit*", "cuidad*", "atten*", "desagadrad*", "educad*", "simpati*"),
+                                        "rud*", "personal*", "bonit*", "cuidad*", "atten*", "desagadrad*", "educad*", "simpati*","friend*","incred*","genial*","antip*","atenc*","perfec*","lent*","pesim*"),
+                          
                           Qualità = c( "val*", "bon*", "cup*", "calid*", "excel*", "mal*", "buen*", "saboros*",
-                                      "estupend*", "complet*","peqe", "tant*", "grand*"),
+                                      "estupend*", "complet*","peqe", "tant*", "grand*", "simpl*","delici*","content*","estup*","grea*","maj*","peor*","gust*","bien*","perfec*","ecxelent*","ric*","fri*","fatal*","pesim*","recomend*","espetac*"),
                           
                           Prezzo = c( "prec*", "car*", "paga*", "bass*", "peqe*", "poc*", "derec*"),
                           
+                          
                           Location = c("limp*", "suci*", "gran*", "bonit*", "peqe", "local*", "locatio*", "posici*", "centr*",
-                                       "espacio*", "lind*", "encant*", "cuidad* ")
+                                       "espacio*", "lind*", "encant*", "cuidad* ","preci*","perfec*","agradab*","fri*","espetac*")
                           ))
 
 campioni_R <- import("C:/Users/FilippoConsole/OneDrive - ITS Angelo Rizzoli/Desktop.old/RStudio/Esame-R/campioni_R.xlsx")
@@ -55,19 +57,56 @@ print(typeof(Driver))
 install.packages("readtext")
 install.packages("quanteda.textstats")
 
-Corpus_pasticcerie <- corpus(pasticcerie)
+#Corpus
+Corpus_campioni_R_2 <- corpus(campioni_R_2)
 Analisi_testo <- textstat_summary(Corpus_pasticcerie)
 
-
-Dfm_pasticcierie <- Corpus_pasticcerie %>%
+#DFM
+Dfm_Training <- Corpus_campioni_R_2 %>%
   tokens(remove_punct = T, remove_numbers = T) %>%
   tokens_tolower() %>%
   tokens_wordstem() %>%
   tokens_remove(c(stopwords("spanish"), "y", "el", "muy","ha","la","las","en","vi","un","sin","me")) %>%
   dfm()
 
-topfeatures(Dfm_pasticcierie)
+topfeatures(Dfm_Training)
 
 #Applicazione Dizionario alla DFM
 
-Driver_pasticcierie <- dfm_lookup(PasticcierieSenzaCampioni, Driver)
+Driver_Training <- dfm_lookup(Dfm_Training, Driver)
+Driver_Training
+
+
+#Test set
+#Corpus
+Corpus_PasticcierieSenzaCampioni <- corpus(PasticcierieSenzaCampioni)
+Analisi_testo <- textstat_summary(Corpus_PasticcierieSenzaCampioni)
+
+#DFM
+Dfm_Test <- Corpus_PasticcierieSenzaCampioni %>%
+  tokens(remove_punct = T, remove_numbers = T) %>%
+  tokens_tolower() %>%
+  tokens_wordstem() %>%
+  tokens_remove(c(stopwords("spanish"), "y", "el", "muy","ha","la","las","en","vi","un","sin","me")) %>%
+  dfm()
+
+topfeatures(Dfm_Test)
+
+#Applicazione Dizionario alla DFM
+
+Driver_Test <- dfm_lookup(Dfm_Test, Driver)
+Driver_Test
+
+#Controllo se matchano
+setequal(featnames(Dfm_Training), 
+         featnames(Dfm_Test)) 
+
+#Controllimo la lunghezza e la sistemiamo rendendola uguale
+length(Dfm_Training@Dimnames$features)
+
+length(Dfm_Test@Dimnames$features)
+
+Dfm_Test2 <- dfm_match(Dfm_Test, features = featnames(Dfm_Training))
+
+setequal(featnames(Dfm_Training), 
+         featnames(Dfm_Test2)) 
