@@ -58,11 +58,11 @@ install.packages("readtext")
 install.packages("quanteda.textstats")
 
 #Corpus
-Corpus_campioni_R_2 <- corpus(campioni_R_2)
+Corpus_campioni_R <- corpus(campioni_R)
 Analisi_testo <- textstat_summary(Corpus_pasticcerie)
 
 #DFM
-Dfm_Training <- Corpus_campioni_R_2 %>%
+Dfm_Training <- Corpus_campioni_R %>%
   tokens(remove_punct = T, remove_numbers = T) %>%
   tokens_tolower() %>%
   tokens_wordstem() %>%
@@ -110,3 +110,15 @@ Dfm_Test2 <- dfm_match(Dfm_Test, features = featnames(Dfm_Training))
 
 setequal(featnames(Dfm_Training), 
          featnames(Dfm_Test2)) 
+
+#Creo le matrci basandomi su i due DFM test e training
+Matrice_Training <- as.matrix(Dfm_Training)
+Matrice_Test <- as.matrix(Dfm_Test2)
+
+#Trasformazione della variabile su cui vogliamo svolgere il training
+
+str(Dfm_Training@docvars$sentiment_score)
+
+#Trasformiamo in factor
+Dfm_Training@docvars$sentiment_score <- as.factor(Dfm_Training@docvars$sentiment_score)
+str(Dfm_Training@docvars$sentiment_score)
