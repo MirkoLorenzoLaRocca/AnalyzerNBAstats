@@ -32,10 +32,12 @@
   # write_xlsx(campioni, "campioni.xlsx")
 
 Driver <- dictionary(list(Personale = c("amabl*", "cordial*", "empatic*", "dispo*", "groser*", "maleduca*", "descort*",
-                                        "rud*", "personal*", "bonit*", "cuidad*", "atten*", "desagadrad*", "educad*", "simpati*","friend*","incred*","genial*","antip*","atenc*","perfec*","lent*","pesim*"),
+                                        "rud*", "personal*", "bonit*", "cuidad*", "atten*", "desagadrad*", "educad*", "simpati*","friend*",
+                                        "incred*","genial*","antip*","atenc*","perfec*","lent*","pesim*"),
                           
                           Qualità = c( "val*", "bon*", "cup*", "calid*", "excel*", "mal*", "buen*", "saboros*",
-                                      "estupend*", "complet*","peqe", "tant*", "grand*", "simpl*","delici*","content*","estup*","grea*","maj*","peor*","gust*","bien*","perfec*","ecxelent*","ric*","fri*","fatal*","pesim*","recomend*","espetac*"),
+                                      "estupend*", "complet*","peqe", "tant*", "grand*", "simpl*","delici*","content*","estup*","grea*","maj*",
+                                      "peor*","gust*","bien*","perfec*","ecxelent*","ric*","fri*","fatal*","pesim*","recomend*","espetac*"),
                           
                           Prezzo = c( "prec*", "car*", "paga*", "bass*", "peqe*", "poc*", "derec*"),
                           
@@ -52,14 +54,14 @@ print(typeof(Driver))
 
 
 
-
+#Algoritmo Supervisionato
 #Training set
 install.packages("readtext")
 install.packages("quanteda.textstats")
 
 #Corpus
 Corpus_campioni_R <- corpus(campioni_R)
-Analisi_testo <- textstat_summary(Corpus_pasticcerie)
+Analisi_testo <- textstat_summary(Corpus_campioni_R)
 
 #DFM
 Dfm_Training <- Corpus_campioni_R %>%
@@ -103,7 +105,6 @@ setequal(featnames(Dfm_Training),
 
 #Controllimo la lunghezza e la sistemiamo rendendola uguale
 length(Dfm_Training@Dimnames$features)
-
 length(Dfm_Test@Dimnames$features)
 
 Dfm_Test2 <- dfm_match(Dfm_Test, features = featnames(Dfm_Training))
@@ -122,3 +123,112 @@ str(Dfm_Training@docvars$sentiment_score)
 #Trasformiamo in factor
 Dfm_Training@docvars$sentiment_score <- as.factor(Dfm_Training@docvars$sentiment_score)
 str(Dfm_Training@docvars$sentiment_score)
+
+#Algoritmo SemiSupervisionato
+library(newsmap)
+
+#Utilizziamo il dizionario creato in precedenza per classicare le categorie da analizzare
+#creaiamo la dfm del algoritmo semisupervisionato
+Dfm_SSVPasticcierie <- Corpus_pasticcierie %>%
+  tokens(remove_punct = T, remove_numbers = T) %>%
+  tokens_tolower() %>%
+  tokens_wordstem() %>%
+  tokens_remove(c(stopwords("spanish"), "y", "el", "muy","ha","la","las","en","vi","un","sin","me")) %>%
+  dfm()
+Dfm_SSVPasticcierie <- dfm_lookup(Dfm_SSVPasticcierie, Driver)
+Dfm_SSVPasticcierie
+
+#Creo la Dfm delle pasticcierie e il corpus
+Corpus_pasticcierie <- corpus(pasticcerie)
+Analisi_testo <- textstat_summary(Corpus_pasticcierie)
+
+Dfm_Pasticcierie <- Corpus_pasticcierie %>%
+  tokens(remove_punct = T, remove_numbers = T) %>%
+  tokens_tolower() %>%
+  tokens_wordstem() %>%
+  tokens_remove(c(stopwords("spanish"), "y", "el", "muy","ha","la","las","en","vi","un","sin","me")) %>%
+  dfm()
+
+Dfm_SSVPasticcierie <- dfm_lookup(Dfm_Test, Driver)
+Dfm_SSVPasticcierie
+
+#Training Stage 
+Text_Model <- textmodel_newsmap(Dfm_Pasticcierie, Dfm_SSVPasticcierie)
+Text_Model$model[, 1:30]
+
+#Predizione
+predict(Text_Model)[1:15]
+
+Dfm_SSVPasticcierie$Semisupervisionato <- predict(Text_Model)
+str(Dfm_SSVPasticcierie)
+
+#Calcoliamo la percentuale di menzione dei vari driver all'interno delle recensioni
+round(prop.table(table(predict(Text_Model))), 2)*100
+
+#Classificazione
+#Naive Bayes Model
+install.packages("naivebayes")
+library(naivebayes)
+#settiamo il seed
+set.seed(123)
+
+#Lanciamo il modello
+system.time(NaiveBayesModel <- multinomial_naive_bayes(x = Matrice_Training,
+                                                       y = Dfm_Training@docvars$sentiment_score,
+                                                       laplace = 1))
+summary(NaiveBayesModel)
+
+#Salviamo la predizione in un oggetto
+Test_predictNB <- predict(NaiveBayesModel, Matrice_Test)
+table(Test_predictNB)
+round(prop.table(table(Test_predictNB)), 2)
+
+#random Forest
+install.packages("randomForest")
+library(randomForest)
+set.seed(123)
+system.time(RF <- randomForest( y = Dfm_Training@docvars$sentiment_score, 
+                                x = Matrice_Training,
+                                importance = TRUE,
+                                do.trace = FALSE,
+                                ntree = 500))
+RF
+#Quante features sono state usate per la creazione dei subset
+sqrt(length(Dfm_Training@Dimnames$features))
+
+#Calcolo degli errori
+30+21+2
+
+#Numero dei testi calssificati
+nrow(campioni_R)
+53/200
+
+#Grafico Errori
+plot(RF, type = "l", col = c("black", "steelblue4","violetred4", "springgreen4"),main = "Random Forest Model Errors: sentiment variable")
+legend("topright", horiz = F, cex = 0.7, fill = c("springgreen4", "black", "steelblue4", "violetred4"), c("Positive error", "Average error", "Negative error", "Neutral error"))
+
+Errori <- as.data.frame(RF$err.rate)
+#Estraiamo il numero di tree associati con l'errore più basso
+which.min(Errori$OOB)
+#Corregiamo 
+set.seed(123)
+system.time(RF2 <- randomForest( y = Dfm_Training@docvars$sentiment_score, 
+                                x = Matrice_Training,
+                                importance = FALSE,
+                                do.trace = FALSE,
+                                ntree = 1))
+RF2
+#Controlliamo con il grafico
+plot(RF2, type = "l", col = c("black", "steelblue4","violetred4", "springgreen4"),main = "Random Forest Model Errors: sentiment variable")
+legend("topright", horiz = F, cex = 0.7, fill = c("springgreen4", "black", "steelblue4", "violetred4"), c("Positive error", "Average error", "Negative error", "Neutral error"))
+
+#Predizione
+system.time(Test_PredictRF <- predict(RF2, Matrice_Test, type="class"))
+table(Test_PredictRF)
+round(prop.table(table(Test_PredictRF)), 2)
+
+#Support Vector machine
+install.packages("iml")
+install.packages("future")
+install.packages("future.callr")
+install.packages("e1071")
