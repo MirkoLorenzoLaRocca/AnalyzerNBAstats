@@ -283,3 +283,239 @@ ggplot(df.long,aes(algoritmo,value,fill=variable))+
         axis.title=element_text(size=11,face="plain"),
         axis.text= element_text(size =10, face = "italic")
   )
+
+#cross validation----
+install.packages("cvTools")
+library(cvTools)
+install.packages("caret")
+library(caret)
+
+matrice_training2 <- Matrice_Training
+set.seed(123)
+k <- 5
+folds <- cvFolds(NROW(matrice_training2), K = k)
+
+#naive bayes----
+#loop
+system.time(for(i in 1:k){
+  Matrice_Training <-
+    matrice_training2 [folds$subsets[folds$which != i], ]
+  pasticcerie_validation_set <-
+    matrice_training2 [folds$subsets[folds$which == i], ]
+  set.seed(123)
+  NaiveBayesModel <- multinomial_naive_bayes(
+    y= Dfm_Training[folds$subsets[folds$which != i], ]
+    @docvars$sentiment ,
+    x=Matrice_Training, laplace = 1)
+  Predictions_NB <- predict(NaiveBayesModel, 
+                            newdata= pasticcerie_validation_set, 
+                            type = "class")
+  class_table <- table("Predictions"= Predictions_NB,
+                       
+                       "Actual"=Dfm_Training[folds$subsets[folds$which == i], ]@docvars$sentiment)
+  
+  print(class_table)
+  df<-confusionMatrix( class_table, mode = "everything")
+  df_measures_NB<-paste0("conf.mat.nb",i)
+  assign(df_measures_NB,df)
+})
+
+#creiamo dataset per la cross validation
+NB_Prediction <- data.frame(col1=vector(), col2=vector(), col3=vector(), col4=vector())
+
+#Riempiamo il dataset con i valori di accuracy e f1 
+for(i in mget(ls(pattern = "conf.mat.nb")) ) {
+  Accuracy <-(i)$overall[1]
+  p <- as.data.frame((i)$byClass)
+  F1_negative <- p$F1[1]
+  F1_neutral <- p$F1[2]
+  F1_positive <- p$F1[3]
+  NB_Prediction <- rbind(NB_Prediction , cbind(Accuracy , F1_negative ,
+                                               F1_neutral, F1_positive ))
+  
+}
+
+#sostituzione NA
+NB_Prediction[is.na(NB_Prediction)] <- 0
+str(NB_Prediction)
+
+#valore medio di accuratezza e F1
+avgac_nb <- mean(NB_Prediction[,1])
+avgf1_nb <- mean(colMeans(NB_Prediction[-1]))
+avgac_nb
+avgf1_nb
+
+#random forest----
+#loop
+system.time(for(i in 1:k){
+  Matrice_Training <-
+    matrice_training2 [folds$subsets[folds$which != i], ]
+  pasticcerie_validation_set <-
+    matrice_training2 [folds$subsets[folds$which == i], ]
+  set.seed(123)
+  RandomForest <- randomForest(
+    y= Dfm_Training[folds$subsets[folds$which != i], ]
+    @docvars$sentiment ,
+    x=Matrice_Training, do.trace=FALSE, ntree=1)
+  Predictions_RF <- predict(RandomForest, 
+                            newdata= pasticcerie_validation_set, 
+                            type="class")
+  class_table <- table("Predictions"= Predictions_RF,
+                       "Actual"=Dfm_Training[folds$subsets[folds$which == i], ]@docvars$sentiment)
+  print(class_table)
+  df<-confusionMatrix( class_table, mode = "everything")
+  df_measures_RF<-paste0("conf.mat.rf",i)
+  assign(df_measures_RF,df)
+})
+
+RF_Predictions <- data.frame(col1=vector(), col2=vector(), col3=vector(), col4 = vector())
+
+#riempiamo il dataset con le performance metrics
+for(i in mget(ls(pattern = "conf.mat.rf")) ) { #conf.mat.rf
+  Accuracy <-(i)$overall[1]
+  p <- as.data.frame((i)$byClass)
+  F1_negative <- p$F1[1]
+  F1_neutral <- p$F1[2]
+  F1_positive <- p$F1[3]
+  RF_Predictions <- rbind(RF_Predictions , cbind(Accuracy , F1_negative ,
+                                                 F1_neutral, F1_positive ))
+  
+}
+
+#Sostituiamo i valori mancanti con 0
+RF_Predictions [is.na(RF_Predictions )] <- 0
+
+#Calcoliamo i valori medi
+AverageAccuracy_RF <- mean(RF_Predictions[, 1] )
+AverageF1_RF<- mean(colMeans(RF_Predictions[-1] ))
+
+AverageAccuracy_RF
+AverageF1_RF
+
+#support vector machine----
+#loop
+system.time(for(i in 1:k){
+  Matrice_Training <-
+    matrice_training2 [folds$subsets[folds$which != i], ]
+  pasticcerie_validation_set <-
+    matrice_training2 [folds$subsets[folds$which == i], ]
+  set.seed(123)
+  SupportVectorMachine<- svm(
+    y= Dfm_Training[folds$subsets[folds$which != i], ]
+    @docvars$sentiment, 
+    x=Matrice_Training, kernel='linear', cost = 1)
+  Prediction_SVM <- predict(SupportVectorMachine,
+                            newdata=pasticcerie_validation_set)
+  class_table <- table("Predictions"= Prediction_SVM,
+                       "Actual"=Dfm_Training[folds$subsets[folds$which == i], ]@docvars$sentiment)
+  print(class_table)
+  df<-confusionMatrix( class_table, mode = "everything")
+  df_measures_SVM<-paste0("conf.mat.sv",i)
+  assign(df_measures_SVM,df)
+})
+
+#Creiamo un dataframe vuoto
+SVM_Prediction <- data.frame(col1=vector(), col2=vector(), col3=vector(), col4=vector())
+
+#Riempiamo il dataframe 
+for(i in mget(ls(pattern = "conf.mat.sv")) ) {
+  Accuracy <-(i)$overall[1]
+  p <- as.data.frame((i)$byClass)
+  F1_negative <- p$F1[1]
+  F1_neutral <- p$F1[2]
+  F1_positive <- p$F1[3]
+  SVM_Prediction <- rbind(SVM_Prediction , cbind(Accuracy , F1_negative ,
+                                                 F1_neutral, F1_positive ))
+  
+}
+
+#Sostituiamo NA con 0
+SVM_Prediction [is.na(SVM_Prediction)] <- 0
+
+
+#Calcoliamo i valori medi
+AverageAccuracy_SVM <- mean(SVM_Prediction[, 1] )
+AverageF1_SVM<- mean(colMeans(SVM_Prediction[-1] ))
+
+AverageAccuracy_SVM
+AverageF1_SVM
+
+#Comparazione
+library(reshape2)
+
+# ACCURACY 
+#Creo un dataframe per NB
+AccNB <- as.data.frame(avgac_nb)
+#Rinomino la colonna
+colnames(AccNB)[1] <- "NB"
+
+#Creo un dataframe per RF
+AccRF <- as.data.frame(AverageAccuracy_RF )
+#Rinomino la colonna
+colnames(AccRF)[1] <- "RF"
+
+#Creo un dataframe per SVM
+AccSVM<- as.data.frame(AverageAccuracy_SVM )
+#Rinomino la colonna
+colnames(AccSVM)[1] <- "SVM"
+
+#Unisco in un unico dataframe i valori di accuracy dei tre modelli
+Accuracy_models <- cbind(AccNB, AccRF, AccSVM)
+Accuracy_models
+
+Accuracy_models_Melt <-melt(Accuracy_models)
+str(Accuracy_models_Melt)
+
+#Creo un grafico per i valori di accuracy 
+plot_accuracy <- ggplot(Accuracy_models_Melt, aes(x=variable, y=value, color = variable)) +
+  geom_boxplot() + xlab("Algoritmo") + ylab(label="Values of accuracy") +
+  labs(title = "Cross-validation with k =5: values of accuracy") + coord_flip() +
+  theme_bw() +
+  guides(color=guide_legend(title="Algorithms")) +
+  theme(plot.title = element_text(color = "black", size = 12, face = "italic"),
+        axis.title.x =element_text(size=12,face="bold"),
+        axis.title.y =element_text(size=12, face = "plain"),
+        axis.text= element_text(size =10, face = "italic")
+  )
+
+
+# F1 SCORE 
+# Replico gli stessi step per f1 score
+
+#NB
+F1NB <- as.data.frame(avgf1_nb)
+colnames(F1NB)[1] <- "NB"
+#RF
+F1RF<- as.data.frame(AverageF1_RF )
+colnames(F1RF)[1] <- "RF"
+#SVM
+F1SVM <- as.data.frame(AverageF1_SVM)
+colnames(F1SVM)[1] <- "SVM"
+#DATAFRAME
+f1_models <- cbind(F1NB, F1RF, F1SVM)
+f1_models
+
+f1_models_melt <-melt(f1_models)
+str(f1_models_melt)
+
+#Creo il grafico
+plot_f1 <- ggplot(f1_models_melt, aes(x=variable, y=value, color = variable)) +
+  geom_boxplot() + xlab("Algoritmo") + ylab(label="Values of f1") +
+  labs(title = "Cross-validation with k =5: values of f1") + coord_flip() +
+  theme_bw() +
+  guides(color=guide_legend(title="Algorithms")) +
+  theme(plot.title = element_text(color = "black", size = 12, face = "italic"),
+        axis.title.x =element_text(size=12,face="bold"),
+        axis.title.y =element_text(size=12, face = "plain"),
+        axis.text= element_text(size =10, face = "italic")
+  )
+
+install.packages("gridExtra")
+library(gridExtra)
+#Visualizzo i due grafici 
+grid.arrange(plot_accuracy, plot_f1, nrow=2)
+
+#Possiamo notare che Naive Bayes è nettamente l'algoritmo migliore
+
+#Confrontiamo i brand
+library(dplyr)
