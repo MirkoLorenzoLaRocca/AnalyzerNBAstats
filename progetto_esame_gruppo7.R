@@ -9,7 +9,7 @@
   library(readtext)
 
 #Importazione DataSet----
-  pasticcerie <- import("GRUPPO 6-7. Spain_Bakery.xlsx")
+  pasticcerie <- import("C:/Users/MirkoLorenzoLaRocca/UFS/UFS07/Esercizi/GRUPPO 6-7. Spain_Bakery.xlsx")
   pasticcerie <- filter(pasticcerie, lang_value=="es") #teniamo solo le recensioni segnate come spagnole
   
 #Esaminazione DataSet----
@@ -46,18 +46,17 @@ Driver <- dictionary(list(Personale = c("amabl*", "cordial*", "empatic*", "dispo
                                        "espacio*", "lind*", "encant*", "cuidad* ","preci*","perfec*","agradab*","fri*","espetac*")
                           ))
 
-campioni_R <- import("C:/Users/FilippoConsole/OneDrive - ITS Angelo Rizzoli/Desktop.old/RStudio/Esame-R/campioni_R.xlsx")
+campioni_R <- import("C:/Users/MirkoLorenzoLaRocca/UFS/UFS07/Esercizi/campioni_R.xlsx")
 campioni_R_2 <- select(campioni_R, !sentiment_score)
 
 PasticcierieSenzaCampioni <- as.data.frame(anti_join(pasticcerie, campioni_R_2))
-print(typeof(Driver))
 
 
 
 #Algoritmo Supervisionato
 #Training set
-install.packages("readtext")
-install.packages("quanteda.textstats")
+#install.packages("readtext")
+#install.packages("quanteda.textstats")
 
 #Corpus
 Corpus_campioni_R <- corpus(campioni_R)
@@ -127,17 +126,6 @@ str(Dfm_Training@docvars$sentiment_score)
 #Algoritmo SemiSupervisionato
 library(newsmap)
 
-#Utilizziamo il dizionario creato in precedenza per classicare le categorie da analizzare
-#creaiamo la dfm del algoritmo semisupervisionato
-Dfm_SSVPasticcierie <- Corpus_pasticcierie %>%
-  tokens(remove_punct = T, remove_numbers = T) %>%
-  tokens_tolower() %>%
-  tokens_wordstem() %>%
-  tokens_remove(c(stopwords("spanish"), "y", "el", "muy","ha","la","las","en","vi","un","sin","me")) %>%
-  dfm()
-Dfm_SSVPasticcierie <- dfm_lookup(Dfm_SSVPasticcierie, Driver)
-Dfm_SSVPasticcierie
-
 #Creo la Dfm delle pasticcierie e il corpus
 Corpus_pasticcierie <- corpus(pasticcerie)
 Analisi_testo <- textstat_summary(Corpus_pasticcierie)
@@ -151,6 +139,18 @@ Dfm_Pasticcierie <- Corpus_pasticcierie %>%
 
 Dfm_SSVPasticcierie <- dfm_lookup(Dfm_Test, Driver)
 Dfm_SSVPasticcierie
+
+#Utilizziamo il dizionario creato in precedenza per classicare le categorie da analizzare
+#creaiamo la dfm del algoritmo semisupervisionato
+Dfm_SSVPasticcierie <- Corpus_pasticcierie %>%
+  tokens(remove_punct = T, remove_numbers = T) %>%
+  tokens_tolower() %>%
+  tokens_wordstem() %>%
+  tokens_remove(c(stopwords("spanish"), "y", "el", "muy","ha","la","las","en","vi","un","sin","me")) %>%
+  dfm()
+Dfm_SSVPasticcierie <- dfm_lookup(Dfm_SSVPasticcierie, Driver)
+Dfm_SSVPasticcierie
+
 
 #Training Stage 
 Text_Model <- textmodel_newsmap(Dfm_Pasticcierie, Dfm_SSVPasticcierie)
@@ -228,7 +228,58 @@ table(Test_PredictRF)
 round(prop.table(table(Test_PredictRF)), 2)
 
 #Support Vector machine
-install.packages("iml")
-install.packages("future")
-install.packages("future.callr")
-install.packages("e1071")
+#install.packages("iml")
+#install.packages("future")
+#install.packages("future.callr")
+#install.packages("e1071")
+
+library(iml)
+library(future)
+library(future.callr)
+library(e1071)
+
+#Impostazione del seed
+set.seed(123)
+
+#Eseguiamo il modello
+system.time(SupportVectorMachine <- svm(y = Dfm_Training@docvars$sentiment_score, x = Matrice_Training, kernel = "linear", cost = 1))
+
+#support vectors
+length(SupportVectorMachine$index)
+
+#predizione dati
+system.time(test_predictedSV <- predict(SupportVectorMachine, Matrice_Test))
+
+#visualizzazione sentiment
+table(test_predictedSV)
+round(prop.table(table(test_predictedSV)))
+
+#Aggiungiamo la variabile al test set
+campioni_R_3 <- as.data.frame(PasticcierieSenzaCampioni)
+campioni_R_3$predictionSV <- test_predictedSV
+
+#Confrontiamo i risultati
+distribuzione <- as.data.frame(rbind(prop.table(table(Test_predictNB)), prop.table(table(Test_PredictRF)), prop.table(table(test_predictedSV))))
+str(distribuzione)
+
+#aggiungo algoritmo di riferimento
+distribuzione$algoritmo <- c("neviBayes", "randomForest", "supportVectorMachine")
+
+install.packages("reshape2")
+library(reshape2)
+
+df.long <- melt(distribuzione, id.vars = c("algoritmo"))
+str(df.long)
+
+library(ggplot2)
+#Creiamo un plot
+ggplot(df.long,aes(algoritmo,value,fill=variable))+
+  geom_bar(position="dodge",stat="identity") + scale_fill_manual(values = c("violetred3", "yellow3", "green4")) +
+  labs(title = "Comparazione delle predizioni") +
+  theme(axis.text.x = element_text(color="#993333", angle=90)) + coord_flip() +
+  ylab(label="Proporzione delle categorie nel test set") + xlab("Algoritmi") +
+  guides(fill=guide_legend(title="Categorie di \nsentiment")) +
+  theme(plot.title = element_text(color = "black", size = 12, face = "plain"),
+        axis.title=element_text(size=11,face="plain"),
+        axis.text= element_text(size =10, face = "italic")
+  )
