@@ -26,6 +26,8 @@
   sum(is.na(pasticcerie$score_rating)) #gli score rating non contengono NA
   sum(is.na(pasticcerie$text)) #i text non contengono NA
   
+  pasticcerie$sentiment_score <- ""
+  PasticcierieSenzaCampioni$sentiment_score <- ""
   #estraiamo 200 recensioni a caso per classificarle a mano per poi allenare l'algoritmo
   # campioni <- sample_n(pasticcerie, 200)
   library(writexl) #avviamo la libreria per esportare i campioni su excel e analizzarli più comodamente
@@ -167,7 +169,7 @@ round(prop.table(table(predict(Text_Model))), 2)*100
 
 #Classificazione
 #Naive Bayes Model
-install.packages("naivebayes")
+#install.packages("naivebayes")
 library(naivebayes)
 #settiamo il seed
 set.seed(123)
@@ -184,7 +186,7 @@ table(Test_predictNB)
 round(prop.table(table(Test_predictNB)), 2)
 
 #random Forest
-install.packages("randomForest")
+#install.packages("randomForest")
 library(randomForest)
 set.seed(123)
 system.time(RF <- randomForest( y = Dfm_Training@docvars$sentiment_score, 
@@ -265,7 +267,7 @@ str(distribuzione)
 #aggiungo algoritmo di riferimento
 distribuzione$algoritmo <- c("neviBayes", "randomForest", "supportVectorMachine")
 
-install.packages("reshape2")
+#install.packages("reshape2")
 library(reshape2)
 
 df.long <- melt(distribuzione, id.vars = c("algoritmo"))
@@ -285,9 +287,9 @@ ggplot(df.long,aes(algoritmo,value,fill=variable))+
   )
 
 #cross validation----
-install.packages("cvTools")
+#install.packages("cvTools")
 library(cvTools)
-install.packages("caret")
+#install.packages("caret")
 library(caret)
 
 matrice_training2 <- Matrice_Training
@@ -510,7 +512,7 @@ plot_f1 <- ggplot(f1_models_melt, aes(x=variable, y=value, color = variable)) +
         axis.text= element_text(size =10, face = "italic")
   )
 
-install.packages("gridExtra")
+#install.packages("gridExtra")
 library(gridExtra)
 #Visualizzo i due grafici 
 grid.arrange(plot_accuracy, plot_f1, nrow=2)
@@ -519,3 +521,18 @@ grid.arrange(plot_accuracy, plot_f1, nrow=2)
 
 #Confrontiamo i brand
 library(dplyr)
+table(pasticcerie$Players)
+PasticcierieSenzaCampioni$sentiment_score <- Test_predictNB
+
+library(naivebayes)
+#Lanciamo il modello
+system.time(NaiveBayesModel <- multinomial_naive_bayes(x = matrice_pasticcerie,
+                                                       y = Dfm_Pasticcierie@docvars$sentiment_score,
+                                                       laplace = 1))
+summary(NaiveBayesModel)
+
+#Salviamo la predizione in un oggetto
+Final_predictNB <- predict(NaiveBayesModel, Dfm_Pasticcierie)
+table(Final_predictNB)
+round(prop.table(table(Final_predictNB)), 2)
+rating_generale <- select(pasticcerie, Players, score_rating, sentiment_score)
