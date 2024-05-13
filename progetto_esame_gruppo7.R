@@ -9,8 +9,19 @@
   library(readtext)
 
 #Importazione DataSet----
-  pasticcerie <- import("C:/Users/MirkoLorenzoLaRocca/UFS/UFS07/Esercizi/GRUPPO 6-7. Spain_Bakery.xlsx")
+  pasticcerie <- import("GRUPPO 6-7. Spain_Bakery.xlsx")
   pasticcerie <- filter(pasticcerie, lang_value=="es") #teniamo solo le recensioni segnate come spagnole
+  
+#Creo la Dfm delle pasticcierie e il corpus
+Corpus_pasticcierie <- corpus(pasticcerie)
+Analisi_testo <- textstat_summary(Corpus_pasticcierie)
+  
+Dfm_Pasticcierie <- Corpus_pasticcierie %>%
+tokens(remove_punct = T, remove_numbers = T) %>%
+tokens_tolower() %>%
+tokens_wordstem() %>%
+tokens_remove(c(stopwords("spanish"), "y", "el", "muy","ha","la","las","en","vi","un","sin","me")) %>%
+dfm()
   
 #Esaminazione DataSet----
   str(pasticcerie) #ispezioniamo il dataset e notiamo che il tipo della variabile likes è chr quando ci aspettavamo un int
@@ -27,7 +38,6 @@
   sum(is.na(pasticcerie$text)) #i text non contengono NA
   
   pasticcerie$sentiment_score <- ""
-  PasticcierieSenzaCampioni$sentiment_score <- ""
   #estraiamo 200 recensioni a caso per classificarle a mano per poi allenare l'algoritmo
   # campioni <- sample_n(pasticcerie, 200)
   library(writexl) #avviamo la libreria per esportare i campioni su excel e analizzarli più comodamente
@@ -47,19 +57,50 @@ Driver <- dictionary(list(Personale = c("amabl*", "cordial*", "empatic*", "dispo
                           Location = c("limp*", "suci*", "gran*", "bonit*", "peqe", "local*", "locatio*", "posici*", "centr*",
                                        "espacio*", "lind*", "encant*", "cuidad* ","preci*","perfec*","agradab*","fri*","espetac*")
                           ))
+#Applichiamo il dizionario alla dfm delle pasticcierie
+Driver_pasticcierie <- dfm_lookup(Dfm_Pasticcierie, Driver)
+Driver_pasticcierie
 
-campioni_R <- import("C:/Users/MirkoLorenzoLaRocca/UFS/UFS07/Esercizi/campioni_R.xlsx")
+#Preleviamo i campioni
+campioni_R <- import("C:/Users/FilippoConsole/OneDrive - ITS Angelo Rizzoli/Desktop.old/RStudio/Esame-R/campioni_R.xlsx")
 campioni_R_2 <- select(campioni_R, !sentiment_score)
 
 PasticcierieSenzaCampioni <- as.data.frame(anti_join(pasticcerie, campioni_R_2))
+PasticcierieSenzaCampioni$sentiment_score <- ""
 
+#Algoritmo SemiSupervisionato
+library(newsmap)
+
+#Utilizziamo il dizionario creato in precedenza per classicare le categorie da analizzare
+#creaiamo la dfm del algoritmo semisupervisionato
+DriverAnalysis_SSV <- Corpus_pasticcierie %>%
+  tokens(remove_punct = T, remove_numbers = T) %>%
+  tokens_tolower() %>%
+  tokens_wordstem() %>%
+  tokens_remove(c(stopwords("spanish"), "y", "el", "muy","ha","la","las","en","vi","un","sin","me")) %>%
+  dfm()
+DriverAnalysis_SSV
+DriverAnalysis_SSV <- dfm_lookup(DriverAnalysis_SSV, Driver)
+
+#Training Stage 
+Text_Model <- textmodel_newsmap(Dfm_Pasticcierie, DriverAnalysis_SSV)
+Text_Model$model[, 1:30]
+
+#Predizione
+predict(Text_Model)[1:15]
+
+DriverAnalysis_SSV$Semisupervisionato <- predict(Text_Model)
+str(DriverAnalysis_SSV)
+head(DriverAnalysis_SSV)
+
+#Calcoliamo la percentuale di menzione dei vari driver all'interno delle recensioni
+round(prop.table(table(predict(Text_Model))), 2)*100
 
 
 #Algoritmo Supervisionato
 #Training set
 #install.packages("readtext")
 #install.packages("quanteda.textstats")
-
 #Corpus
 Corpus_campioni_R <- corpus(campioni_R)
 Analisi_testo <- textstat_summary(Corpus_campioni_R)
@@ -75,10 +116,8 @@ Dfm_Training <- Corpus_campioni_R %>%
 topfeatures(Dfm_Training)
 
 #Applicazione Dizionario alla DFM
-
 Driver_Training <- dfm_lookup(Dfm_Training, Driver)
 Driver_Training
-
 
 #Test set
 #Corpus
@@ -96,13 +135,11 @@ Dfm_Test <- Corpus_PasticcierieSenzaCampioni %>%
 topfeatures(Dfm_Test)
 
 #Applicazione Dizionario alla DFM
-
 Driver_Test <- dfm_lookup(Dfm_Test, Driver)
 Driver_Test
 
 #Controllo se matchano
-setequal(featnames(Dfm_Training), 
-         featnames(Dfm_Test)) 
+setequal(featnames(Dfm_Training), featnames(Dfm_Test)) 
 
 #Controllimo la lunghezza e la sistemiamo rendendola uguale
 length(Dfm_Training@Dimnames$features)
@@ -117,56 +154,13 @@ setequal(featnames(Dfm_Training),
 Matrice_Training <- as.matrix(Dfm_Training)
 Matrice_Test <- as.matrix(Dfm_Test2)
 
-#Trasformazione della variabile su cui vogliamo svolgere il training
-
+#Verifichiamo la struttura della nostra variabile sentiment nel
+#training set 
 str(Dfm_Training@docvars$sentiment_score)
 
 #Trasformiamo in factor
 Dfm_Training@docvars$sentiment_score <- as.factor(Dfm_Training@docvars$sentiment_score)
 str(Dfm_Training@docvars$sentiment_score)
-
-#Algoritmo SemiSupervisionato
-library(newsmap)
-
-#Creo la Dfm delle pasticcierie e il corpus
-Corpus_pasticcierie <- corpus(pasticcerie)
-Analisi_testo <- textstat_summary(Corpus_pasticcierie)
-
-Dfm_Pasticcierie <- Corpus_pasticcierie %>%
-  tokens(remove_punct = T, remove_numbers = T) %>%
-  tokens_tolower() %>%
-  tokens_wordstem() %>%
-  tokens_remove(c(stopwords("spanish"), "y", "el", "muy","ha","la","las","en","vi","un","sin","me")) %>%
-  dfm()
-
-Dfm_SSVPasticcierie <- dfm_lookup(Dfm_Test, Driver)
-Dfm_SSVPasticcierie
-
-#Utilizziamo il dizionario creato in precedenza per classicare le categorie da analizzare
-#creaiamo la dfm del algoritmo semisupervisionato
-Dfm_SSVPasticcierie <- Corpus_pasticcierie %>%
-  tokens(remove_punct = T, remove_numbers = T) %>%
-  tokens_tolower() %>%
-  tokens_wordstem() %>%
-  tokens_remove(c(stopwords("spanish"), "y", "el", "muy","ha","la","las","en","vi","un","sin","me")) %>%
-  dfm()
-Dfm_SSVPasticcierie <- dfm_lookup(Dfm_SSVPasticcierie, Driver)
-Dfm_SSVPasticcierie
-
-
-#Training Stage 
-Text_Model <- textmodel_newsmap(Dfm_Pasticcierie, Dfm_SSVPasticcierie)
-Text_Model$model[, 1:30]
-
-#Predizione
-predict(Text_Model)[1:15]
-
-Dfm_SSVPasticcierie$Semisupervisionato <- predict(Text_Model)
-str(Dfm_SSVPasticcierie)
-head(Dfm_SSVPasticcierie)
-
-#Calcoliamo la percentuale di menzione dei vari driver all'interno delle recensioni
-round(prop.table(table(predict(Text_Model))), 2)*100
 
 #Classificazione
 #Naive Bayes Model
@@ -260,6 +254,8 @@ round(prop.table(table(test_predictedSV)))
 #Aggiungiamo la variabile al test set
 campioni_R_3 <- as.data.frame(PasticcierieSenzaCampioni)
 campioni_R_3$predictionSV <- test_predictedSV
+
+
 
 #Confrontiamo i risultati
 distribuzione <- as.data.frame(rbind(prop.table(table(Test_predictNB)), prop.table(table(Test_PredictRF)), prop.table(table(test_predictedSV))))
@@ -435,7 +431,6 @@ for(i in mget(ls(pattern = "conf.mat.sv")) ) {
 #Sostituiamo NA con 0
 SVM_Prediction [is.na(SVM_Prediction)] <- 0
 
-
 #Calcoliamo i valori medi
 AverageAccuracy_SVM <- mean(SVM_Prediction[, 1] )
 AverageF1_SVM<- mean(colMeans(SVM_Prediction[-1] ))
@@ -537,7 +532,7 @@ system.time(NaiveBayesModel <- multinomial_naive_bayes(x = matrice_pasticcerie,
 summary(NaiveBayesModel)
 
 #Creiamo degli excel----
-write_xlsx(df_allenato, "dataframe_finale.xlsx")
+write_xlsx(df_allenato, "C:/Users/FilippoConsole/OneDrive - ITS Angelo Rizzoli/Desktop.old/RStudio/Esame-R/dataframe_finale.xlsx")
 
 
 #Salviamo la predizione in un oggetto
