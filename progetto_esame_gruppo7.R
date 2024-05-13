@@ -163,6 +163,7 @@ predict(Text_Model)[1:15]
 
 Dfm_SSVPasticcierie$Semisupervisionato <- predict(Text_Model)
 str(Dfm_SSVPasticcierie)
+head(Dfm_SSVPasticcierie)
 
 #Calcoliamo la percentuale di menzione dei vari driver all'interno delle recensioni
 round(prop.table(table(predict(Text_Model))), 2)*100
@@ -522,7 +523,11 @@ grid.arrange(plot_accuracy, plot_f1, nrow=2)
 #Confrontiamo i brand
 library(dplyr)
 table(pasticcerie$Players)
-PasticcierieSenzaCampioni$sentiment_score <- Test_predictNB
+ncol(PasticcierieSenzaCampioni)
+ncol(Dfm_Test)
+df_allenato <- rbind(PasticcierieSenzaCampioni, campioni_R)
+head(df_allenato)
+
 
 library(naivebayes)
 #Lanciamo il modello
@@ -530,6 +535,10 @@ system.time(NaiveBayesModel <- multinomial_naive_bayes(x = matrice_pasticcerie,
                                                        y = Dfm_Pasticcierie@docvars$sentiment_score,
                                                        laplace = 1))
 summary(NaiveBayesModel)
+
+#Creiamo degli excel----
+write_xlsx(df_allenato, "dataframe_finale.xlsx")
+
 
 #Salviamo la predizione in un oggetto
 Final_predictNB <- predict(NaiveBayesModel, Dfm_Pasticcierie)
