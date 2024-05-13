@@ -1,7 +1,7 @@
 #Avvio librerie----
   library(rio)
   library(dplyr)
-  #install.packages("quanteda")
+  install.packages("quanteda")
   #install.packages("newsmap")
   library(quanteda)
   library(newsmap)
@@ -43,6 +43,9 @@ dfm()
   library(writexl) #avviamo la libreria per esportare i campioni su excel e analizzarli più comodamente
   # write_xlsx(campioni, "campioni.xlsx")
 
+  #Creiamo una wordcloud
+textplot_wordcloud(Dfm_Pasticcierie, min_size = 1.5,max_size = 4,min.count = 10,max_words = 50,random.order = FALSE,random_color = FALSE,rotation = 0,colors = RColorBrewer::brewer.pal(8,"Dark2"))
+
 Driver <- dictionary(list(Personale = c("amabl*", "cordial*", "empatic*", "dispo*", "groser*", "maleduca*", "descort*",
                                         "rud*", "personal*", "bonit*", "cuidad*", "atten*", "desagadrad*", "educad*", "simpati*","friend*",
                                         "incred*","genial*","antip*","atenc*","perfec*","lent*","pesim*"),
@@ -60,6 +63,27 @@ Driver <- dictionary(list(Personale = c("amabl*", "cordial*", "empatic*", "dispo
 #Applichiamo il dizionario alla dfm delle pasticcierie
 Driver_pasticcierie <- dfm_lookup(Dfm_Pasticcierie, Driver)
 Driver_pasticcierie
+
+#A questo punto vorremo unire i risultati della classificazione al dataset di partenza, per cui dovremo:
+#1. Convertire l'output in data frame
+Driver_Pasticcierie_Converted <- convert(Driver_pasticcierie,to = "data.frame")
+
+#2. Aggiungere un id che verrà utilizzato per il merging
+Driver_Pasticcierie_Converted$id <- 1:nrow(Driver_Pasticcierie_Converted)
+
+#Vediamo la struttura del dataset
+str(Driver_Pasticcierie_Converted)
+
+library(dplyr)
+DriverAnalysis <- cross_join(Driver_Pasticcierie_Converted, pasticcerie)
+
+#Selezioniamo soltanto le variabili rilevanti
+DriverAnalysis <- select(DriverAnalysis, id, text, Personale, Qualità, Prezzo, Location, sentiment_score)
+
+
+#Il dataset finale
+library(kableExtra)
+kbl(DriverAnalysis[1:15, ], longtable = T, booktabs = T, caption = "I driver menzionati nelle recensioni") %>% kable_styling(c("bordered", "condensed", "hover"), full_width = F, font_size = 8) %>% row_spec(0, color = "black", bold = T, background = "#b8daba", font_size = 11)
 
 #Preleviamo i campioni
 campioni_R <- import("C:/Users/FilippoConsole/OneDrive - ITS Angelo Rizzoli/Desktop.old/RStudio/Esame-R/campioni_R.xlsx")
@@ -540,3 +564,5 @@ Final_predictNB <- predict(NaiveBayesModel, Dfm_Pasticcierie)
 table(Final_predictNB)
 round(prop.table(table(Final_predictNB)), 2)
 rating_generale <- select(pasticcerie, Players, score_rating, sentiment_score)
+
+
