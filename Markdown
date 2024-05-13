@@ -1,0 +1,64 @@
+# Analisi delle Recensioni delle Pasticcerie in Spagna
+
+Questo documento descrive lo script R utilizzato per analizzare le recensioni delle pasticcerie in Spagna, focalizzandosi sulla manipolazione dei dati, analisi testuale, e modelli di classificazione.
+
+## Setup delle Librerie
+
+Lo script inizia con il caricamento delle librerie necessarie:
+
+```r
+library(rio)               # Importazione dati
+library(dplyr)             # Manipolazione dati
+library(quanteda)          # Analisi testuale
+library(newsmap)           # Classificazione di testi
+library(quanteda.textstats) # Statistiche testuali
+library(readtext)          # Lettura testi
+Importazione dei Dati
+
+I dati vengono importati da un file Excel
+
+pasticcerie <- import("C:/Users/.../Spain_Bakery.xlsx")
+pasticcerie <- filter(pasticcerie, lang_value=="es")
+
+Pulizia dei Dati
+Verifica e rimozione di colonne con dati non utilizzabili:
+
+str(pasticcerie)
+table(pasticcerie$likes)
+pasticcerie <- select(pasticcerie, -likes)
+
+Preparazione dei Dati per Analisi
+Aggiunta di una nuova colonna e definizione di un dizionario per lanalisi del testo:
+
+pasticcerie$sentiment_score <- ""
+Driver <- dictionary(list(
+    Personale = c("amabl*", "cordial*", ...),
+    Qualità = c("val*", "bon*", ...),
+    Prezzo = c("prec*", "car*", ...),
+    Location = c("limp*", "suci*", ...)
+))
+
+Analisi del Testo
+Creazione di un corpus e preparazione della DFM (Document-Feature Matrix):
+
+Corpus_campioni_R <- corpus(campioni_R)
+Dfm_Training <- Corpus_campioni_R %>%
+  tokens(...) %>%
+  dfm()
+Driver_Training <- dfm_lookup(Dfm_Training, Driver)
+
+Classificazione con Modelli di Machine Learning
+
+Utilizzo di textmodel_newsmap per classificare il testo:
+
+Text_Model <- textmodel_newsmap(Dfm_Pasticcierie, Dfm_SSVPasticcierie)
+predictions <- predict(Text_Model)
+
+Conclusioni
+Il documento dovrebbe proseguire descrivendo i risultati ottenuti, analisi ulteriori e potenziali miglioramenti del modello.
+
+
+ 
+
+
+
